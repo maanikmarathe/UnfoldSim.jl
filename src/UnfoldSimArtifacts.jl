@@ -1,13 +1,6 @@
-# For helper function to read in the large model
-# using HDF5
-# using DataFrames
-
-# for angle conversion - need to check if we still need this or if the simple angle conversion util code will suffice
-# using CartesianFromSpherical
-
+# For helper function to read in the large headmodel, we need HDF5 and DataFrames.
 
 """
-TODO docstring
 Construct the gaze vector in 3-D world coordinates, given the gaze angle (in degrees) as measured from the center gaze (looking straight ahead) in the world x-y plane. Z-component is always 0.  
 """
 function gazevec_from_angle(angle_deg)
@@ -16,12 +9,11 @@ function gazevec_from_angle(angle_deg)
 end
 
 """
-TODO docstring
 Calculate the gaze vector in 3-D world coordinates, given the horizontal and vertical angles (in degrees) from center gaze direction i.e. looking straight ahead.
 """
 function gazevec_from_angle_3d(angle_H, angle_V)
-	# angles measured from center gaze position => use complementary angle for θ; 
-    # ϕ is already measured upwards from the x-y plane, according to the conventions of CoordinateTransformations.jl
+	# since angles are measured from center gaze position => use complementary angle for θ (horizontal direction); 
+    # ϕ (vertical direction) is already measured upwards from the x-y plane, according to the conventions of CoordinateTransformations.jl
 	return Vector{Float32}(CartesianFromSpherical()(Spherical(1, deg2rad(90-angle_H), deg2rad(angle_V))))
 end
 
@@ -47,16 +39,14 @@ function read_eyemodel(;p::String = "HArtMuT_NYhead_extra_eyemodel.mat")
 end
 
 """
-TODO docstring
-
-For each of a given set of labels, find the indices of all the sources in the given model which have that label.
+For each of a given set of labels, find the indices of all the sources in the given hartmut model which have that label.
 
 Arguments:
 - `headmodel`: Head model containing the sources in which to search for labels
 - `labels::Vector{String}`: Labels to search for. 
 
 Returns:
-- `labelsourceindices::Dict`: Dict with the keys being the label and the values being the indices of sources with that label in the given model. 
+- `labelsourceindices::Dict`: Dict with the keys being the given labels and the values being the corresponding indices of sources with that label in the given model. 
 """
 function hart_indices_from_labels(headmodel,labels::AbstractVector=["dummy"])
     labelsourceindices = Dict()
@@ -68,7 +58,6 @@ end
 
 
 """
-TODO docstring
 Calculate orientation vectors from the given positions with respect to the reference. The vectors are normalized to have length 1. 
 `direction` is by default "away" from the reference point; set `direction="towards"` to calculate orientations towards the reference point.
 """
@@ -83,7 +72,6 @@ end
 
 
 """
-TODO docstring
 Return the angle (in degrees) between two 3-D vectors in Cartesian coordinates.
 """
 function angle_between(a,b) 
@@ -107,7 +95,17 @@ end
 
 
 """
-TODO docstring
+Calculate the leadfield (assuming ensemble model of the eye) for a given gaze direction.
+
+# Arguments
+- `eyemodel`: Head model containing the sources
+- `sim_idx::Vector{Int}`: Indices of the sources which should be included in the calculation.
+- `gazedir::Vector{Float64}`: Gaze direction vector in 3-D space, pointing from the eye center to the gaze target. 
+- `max_cornea_angle_deg::Float64`: Angle defining the cone within which a point will be considered as a cornea point based on the gaze direction.
+
+# Returns
+- Ensemble-model leadfield calculated for the given gaze direction, source indices and cornea angle. 
+
 """
 function ensemble_leadfield(eyemodel, sim_idx::Vector{Int}, gazedir::Vector{Float64}, max_cornea_angle_deg::Float64)
 	mag_model = magnitude(eyemodel["leadfield"],eyemodel["orientation"])
@@ -120,8 +118,8 @@ end
 
 
 """
-TODO docstring 
-Single gaze direction. Assumes orientations are already set in eyemodel
+Calculate the leadfield resulting from activating only the specified source points, weighted according to the given weight vector. 
+It is assumed that the orientations for the respective source points are already set in the given head model.
 """
 function generate_eyegaze_eeg(eyemodel, src_idx::AbstractVector, weights::AbstractVector)
 
@@ -142,11 +140,9 @@ given a head model, an array of gaze direction vectors defining the eye movement
 - `eye_model::String` (optional): Choice of model to use for the eye. Options available are "crd" (default) and "ensemble".
 
 # Returns
-- 
-    
-TODO docstring; type for headmodel; always takes in gaze direction vectors as controlsignal
+- Matrix of size n_channels x n_gazepoints containing the eyeball-generated leadfield for each time point based on the corresponding gaze direction vectors. 
 """
-function simulate_eyemovement(headmodel, gazevectors::AbstractMatrix, eye_model::String="crd")
+function simulate_eyemovement(headmodel, gazevectors::AbstractMatrix, eye_model::String)
     # when gaze direction vector changes, 
     # CRD: orientation changes, weight stays the same (=1 for all points)
     # Ensemble: orientation stays the same, weight changes (=1 for cornea points, -1 for retina points, calculated based on gaze direction)
@@ -197,7 +193,6 @@ end
 
 
 """
-TODO docstring
 Read the eye model from a mat file, remove channels Nk1-Nk4, and calculate left/right eye indices, eye centers, orientations and add them to the eyemodel as properties. 
 Return imported model, labelsourceindices of eyemodel
 """
@@ -241,10 +236,9 @@ function import_eyemodel(; labels=[
 end
 
 """
-TODO docstring
-
+Find the approximate current gaze direction from the orientations of cornea-labelled sources.
 """
-function find_avg_gazedir()
+function find_avg_gazedir(eyemodel)
     # finding cornea centers and approximate gaze direction (as mean of cornea orientations)
     cornea_center_R = Statistics.mean(eyemodel["pos"][lsi_eyemodel["EyeCornea_right"],:],dims=1)
     cornea_center_L = Statistics.mean(eyemodel["pos"][lsi_eyemodel["EyeCornea_left"],:],dims=1)
@@ -261,7 +255,7 @@ function az_simulation()
 
     # import href gaze coordinates
     sample_data = example_data_eyemovements()
-    href_trajectory = sample_data[1:2,1:20]
+    href_trajectory = sample_data[1:2,1:200]
 
     # setup basic ingredients for simulate
     design = SingleSubjectDesign(; conditions = Dict(:cond_A => ["level_A", "level_B"])) |> x -> RepeatDesign(x, 10);
