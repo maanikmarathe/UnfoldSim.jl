@@ -106,7 +106,6 @@ end
     controlsignal::T
     headmodel
     eye_model::String = "crd"
-    # events # <-- from realdata (or from controlsignal?) or passed in by user. will be added into the events dataframe returned by simulation function
 end
 
 
@@ -129,7 +128,7 @@ end
 end
 @with_kw struct ARDriftNoise <: AbstractContinuousSignal
     controlsignal = nothing
-    σ
+    σ = 1
 end
 @with_kw struct LinearDriftNoise <: AbstractContinuousSignal
     controlsignal = nothing

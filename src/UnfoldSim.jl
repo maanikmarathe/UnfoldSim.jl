@@ -92,3 +92,5 @@ export AbstractControlSignal, GazeDirectionVectors, HREFCoordinates
 export AbstractContinuousSignal, EyeMovement, PowerLineNoise
 export az_simulation
 export example_data_eyemovements
+export DriftNoise, ARDriftNoise, LinearDriftNoise, DCDriftNoise
+export import_eyemodel

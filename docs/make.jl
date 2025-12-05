@@ -54,6 +54,7 @@ makedocs(;
             "Define a new component (with variable duration and shift)" => "./generated/HowTo/newComponent.md",
             "Generate multi channel data" => "./generated/HowTo/multichannel.md",
             "Use existing experimental designs & onsets in the simulation" => "./generated/HowTo/predefinedData.md",
+            "Simulate Artifacts" => "./generated/HowTo/artifacts.md",
         ],
         "Developer documentation" => "developer_docs.md",
         "API / Docstrings" => "api.md",

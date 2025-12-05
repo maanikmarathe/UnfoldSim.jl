@@ -251,7 +251,7 @@ function simulate(rng::AbstractRNG,d::AbstractDesign,c::AbstractComponent,o::Abs
 
     sum_signals = reduce(+, combined_signals)
 
-    return combined_signals, sum_signals, evts
+    return sum_signals, evts, combined_signals # return individual eeg and artifact signals separately for inspection: optional
 end
 
 """
