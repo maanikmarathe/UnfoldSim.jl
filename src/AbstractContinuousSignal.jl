@@ -9,6 +9,8 @@ end
 controlsignal: actual weights (n_channels x n_timepoints) to be applied to the simulated single-channel powerline noise
 """
 function simulate_continuoussignal(rng::AbstractRNG, s::PowerLineNoise, controlsignal::AbstractMatrix, sim::Simulation)
+    # harmonics are always weighted the same relative to each other, irrespective of `channel x timepoint` weights applied later via controlsignal.
+    
     base_freq = s.base_freq
     harmonics = s.harmonics
     sampling_rate = s.sampling_rate
@@ -37,6 +39,10 @@ end
 # generate_controlsignal - returns controlsignal for the specified type of AbstractContinuousSignal.
 # also takes the simulation object since it might influence the generated controlsignal (e.g. generate blinks right after event A -> controlsignal depends on the design) 
 
+function generate_controlsignal(rng::AbstractRNG, cs::AbstractContinuousSignal, sim::Simulation)
+    return generate_controlsignal(deepcopy(rng), cs.controlsignal, sim)
+end
+
 
 # for EyeMovement, always return a 3 x n_timepoints matrix containing gaze direction vectors (n_timepoints number of gaze vectors, in 3 dimensions)
 
@@ -49,12 +55,10 @@ function generate_controlsignal(rng::AbstractRNG, cs::HREFCoordinates, sim::Simu
     return reduce(hcat,gazevec_from_angle_3d.(cs.val[1,:],cs.val[2,:]))
 end
 
-function generate_controlsignal(rng::AbstractRNG, cs::AbstractContinuousSignal, sim::Simulation)
-    return generate_controlsignal(deepcopy(rng), cs.controlsignal, sim)
-end
 
  # for PowerLineNoise we do not yet know the required n_timepoints, so we postpone controlsignal generation until the eeg and the known-size artifacts have already been generated
 function generate_controlsignal(rng::AbstractRNG, cs::PowerLineNoise, sim::Simulation)
+    # in future we may want to allow generating the noise on only a particular channel, which could be done via changing the controlsignal weights.
     return nothing
 end
 

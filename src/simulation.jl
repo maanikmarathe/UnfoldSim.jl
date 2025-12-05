@@ -183,7 +183,7 @@ function simulate(rng::AbstractRNG, simulation::Simulation; return_epoched::Bool
 
 end
 
-"""TODO docstring
+"""
 s: Vector of AbstractContinuousSignal and/or AbstractNoise 
 NOTE:
 1. It is assumed that `AbstractContinuousSignal.controlsignal` 
@@ -206,17 +206,16 @@ function simulate(rng::AbstractRNG,d::AbstractDesign,c::AbstractComponent,o::Abs
     # multiple EyeMovement artifacts are currently allowed. (TODO: check if it makes sense to restrict this. This could be useful if different Eyemovements have different offsets?)
     # PLN simulation assumes that the sampling frequency of the final signal is the same as the sampling frequency of the other signals (eeg/artifacts). TODO: declare this more explicitly in the docstring.
 
-    println("Simulating EEG with no noise...")
     eeg_signal,evts = simulate(deepcopy(rng),sim);
 
     sim_artifacts = s
     controlsignal = generate_controlsignal.(deepcopy.(rng),sim_artifacts,Ref(sim)) 
-    # this is a Vector (size same as s) of Arrays (each with last dimension time) -> each kind of artifact could have a different shape of controlsignal, so keep them as elements of the vector rather than combining to a matrix and losing information of which row(s) corresp. to which artifact
+    # this is a Vector (size same as s) of Arrays (each with last dimension time) -> each kind of artifact could have a different shape of controlsignal, so keep them as elements of the vector rather than combining to a matrix and losing the information of which row(s) correspond to which artifact
     
     # Note on the use of rng: simply using deepcopy(rng) generates the deepcopy just once and reuses the same object for every call to generate_controlsignal.
     # This can be tested by checking the objectid and/or generating a random number inside the called function. 
     # By using deepcopy.(rng) we ensure a new deepcopied object is provided each time.
-    # Another option: map(x->generate_controlsignal(deepcopy(rng),x,sim),sim_artifacts) 
+    # Another option which would also work: map(x->generate_controlsignal(deepcopy(rng),x,sim),sim_artifacts) 
     
     # generate controlsignal for those AbstractContinuousSignal types that need to know the signal size first
     replace!(controlsignal, nothing => ones(size(eeg_signal)[1],max(size(eeg_signal)[end],map(x->size(x)[end],filter(!isnothing,controlsignal))...)))

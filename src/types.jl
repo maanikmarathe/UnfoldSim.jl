@@ -71,9 +71,29 @@ struct Simulation
 end
 
 
-# Eye Movement
+
+# Artifacts
+"""
+    AbstractContinuousSignal
+
+A type to contain the different types of continuous signals that can be used when simulating artifacts.
+
+Subtypes created for specific artifacts should generally contain the field `controlsignal` along with other fields required for the simulation.
+    
+# Fields
+`controlsignal`: Defines the control signal, always starting from the first time point. 
+"""
+abstract type AbstractContinuousSignal end
+
+"""
+    AbstractControlSignal
+
+A type to contain the different types of control signals that can be used when simulating artifacts, especially those that cannot be described using a simple weight matrix.
+"""
 abstract type AbstractControlSignal{T} end
 
+
+# Eye Movement
 struct HREFCoordinates{T} <: AbstractControlSignal{T}
     val::Matrix{T}
 end
@@ -82,16 +102,6 @@ struct GazeDirectionVectors{T} <: AbstractControlSignal{T}
     val::Matrix{T} # size 3 x n_timepoints
 end
 
-
-
-# Artifacts
-"""
-TODO docstring
-`controlsignal`: Defines the control signal, always starting from the first time point. 
-"""
-abstract type AbstractContinuousSignal end
-# in future we may want to allow generating the noise on only a particular channel.
-
 @with_kw struct EyeMovement{T} <: AbstractContinuousSignal
     controlsignal::T
     headmodel
@@ -99,12 +109,7 @@ abstract type AbstractContinuousSignal end
     # events # <-- from realdata (or from controlsignal?) or passed in by user. will be added into the events dataframe returned by simulation function
 end
 
-struct TRF <: AbstractContinuousSignal
-    controlsignal
-    # TBD
-end
 
-# harmonics are always weighted the same relative to each other 
 @with_kw struct PowerLineNoise <: AbstractContinuousSignal
     controlsignal = nothing
     base_freq::Float64 = 50
