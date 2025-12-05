@@ -18,7 +18,7 @@ function simulate_continuoussignal(rng::AbstractRNG, s::PowerLineNoise, controls
 
     n_samples = size(controlsignal)[end]
     k = 0:1:n_samples-1
-    # TODO add check for nyquist criterion? -> warn or error?
+    # TODO (future) add check for nyquist criterion? -> warn or error?
 
     harmonics_signals = [sin.(2 * pi * (base_freq.*h)/sampling_rate .* k) for h in harmonics].*weights_harmonics
     

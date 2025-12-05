@@ -184,13 +184,24 @@ function simulate(rng::AbstractRNG, simulation::Simulation; return_epoched::Bool
 end
 
 """
-s: Vector of AbstractContinuousSignal and/or AbstractNoise 
+    simulate(rng::AbstractRNG,d::AbstractDesign,c::AbstractComponent,o::AbstractOnset,s::AbstractVector)
+
+    Simulate continuous or epoched signal with artifacts, given `rng`, `design`, `component`, `onset` and 
+    `s` (a vector containing noise- or artifact-related objects). Main simulation function for simulation with artifacts.
+
+# Arguments
+- `s::AbstractVector`: Vector of AbstractContinuousSignal and/or AbstractNoise
+
 NOTE:
-1. It is assumed that `AbstractContinuousSignal.controlsignal` 
-    is defined from the start of the simulation. If you require the artifact to start at
-    a different time, please take care to pre-pad the controlsignal with zeros.
-2. EEG simulation components must be multichannel, and it is assumed that
-    the number and position of EEG channels are the same as in the artifact head model. 
+1. It is assumed that when a controlsignal is defined for an `AbstractContinuousSignal`, 
+    it is defined from the first sample (time-point) onwards of the simulation. 
+    If you require the artifact to start at a different time, please take care 
+    to pre-pad the controlsignal with zeros.
+2. In the current version of artifact simulation, the EEG simulation components 
+    must be multichannel, and it is assumed that the number and position of EEG channels 
+    are the same as in the artifact head model. 
+3. Currently the sampling frequency of the final signal is assumed to be 
+    the same as that defined for the power line noise simulation. 
 """
 function simulate(rng::AbstractRNG,d::AbstractDesign,c::AbstractComponent,o::AbstractOnset,s::AbstractVector)
     @assert all(x -> x isa AbstractContinuousSignal || x isa AbstractNoise, s) "Artifact-related inputs should all be of type AbstractContinuousSignal or AbstractNoise"
@@ -200,12 +211,11 @@ function simulate(rng::AbstractRNG,d::AbstractDesign,c::AbstractComponent,o::Abs
     # events from artifacts - not considered/handled right now
     # EEG component is assumed to be multichannel and having the same number and positions of channels as the artifact.
     # noise is considered to be independent of EEG/artifacts.
-    # controlsignals are generated only for AbstractContinuousSignal and not AbstractNoise.
     # currently any number of noise components and/or artifacts are allowed. e.g. we can simulate RedNoise as well as PinkNoise and multiple EyeMovements each starting from t=0.
-    # eeg and artifact signals are simulated separately and then added together, padding to the larger of the two. Then noise is added to this signal.
-    # multiple EyeMovement artifacts are currently allowed. (TODO: check if it makes sense to restrict this. This could be useful if different Eyemovements have different offsets?)
     # PLN simulation assumes that the sampling frequency of the final signal is the same as the sampling frequency of the other signals (eeg/artifacts). TODO: declare this more explicitly in the docstring.
 
+    # eeg and artifact signals are simulated separately and then added together, padding to the larger of the two. Then noise is added to this signal.
+    
     eeg_signal,evts = simulate(deepcopy(rng),sim);
 
     sim_artifacts = s
@@ -220,7 +230,9 @@ function simulate(rng::AbstractRNG,d::AbstractDesign,c::AbstractComponent,o::Abs
     # generate controlsignal for those AbstractContinuousSignal types that need to know the signal size first
     replace!(controlsignal, nothing => ones(size(eeg_signal)[1],max(size(eeg_signal)[end],map(x->size(x)[end],filter(!isnothing,controlsignal))...)))
     
-    artifact_signal = map((x,y)->simulate_continuoussignal(deepcopy(rng),x,y,sim),sim_artifacts,controlsignal); #TODO handle events: right now for simplicity assume no events are being returned
+    artifact_signal = map((x,y)->simulate_continuoussignal(deepcopy(rng),x,y,sim),sim_artifacts,controlsignal); 
+    #TODO (future) - handle events: right now for simplicity assume no events are being returned from artifact simulation
+
     combined_signals = [[eeg_signal] ; artifact_signal]
     
     row_counts = [size(mat, 1) for mat in combined_signals];

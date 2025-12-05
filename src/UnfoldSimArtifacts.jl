@@ -1,5 +1,3 @@
-# For helper function to read in the large headmodel, we need HDF5 and DataFrames.
-
 """
 Construct the gaze vector in 3-D world coordinates, given the gaze angle (in degrees) as measured from the center gaze (looking straight ahead) in the world x-y plane. Z-component is always 0.  
 """
@@ -9,7 +7,9 @@ function gazevec_from_angle(angle_deg)
 end
 
 """
-Calculate the gaze vector in 3-D world coordinates, given the horizontal and vertical angles (in degrees) from center gaze direction i.e. looking straight ahead.
+Calculate the gaze vector in 3-D world coordinates, given the horizontal and vertical angles (in degrees) 
+from center gaze direction i.e. looking straight ahead.
+Utility function: used to calculate gaze direction vectors from HREF coordinates.
 """
 function gazevec_from_angle_3d(angle_H, angle_V)
 	# since angles are measured from center gaze position => use complementary angle for θ (horizontal direction); 
@@ -21,7 +21,7 @@ end
 """
     read_eyemodel(;p::String = "HArtMuT_NYhead_extra_eyemodel.mat")
 
-Read and return the HArtMuT eye model from the given file path.
+Read and return the HArtMuT eye model from the given file path. Utility function.
 
 # Fields
 - `p::String` (optional): Path of the file from which to read the eye model. 
@@ -39,7 +39,7 @@ function read_eyemodel(;p::String = "HArtMuT_NYhead_extra_eyemodel.mat")
 end
 
 """
-For each of a given set of labels, find the indices of all the sources in the given hartmut model which have that label.
+For each of a given set of labels, find the indices of all the sources in the given hartmut model which have that label. Utility function.
 
 Arguments:
 - `headmodel`: Head model containing the sources in which to search for labels
@@ -60,6 +60,7 @@ end
 """
 Calculate orientation vectors from the given positions with respect to the reference. The vectors are normalized to have length 1. 
 `direction` is by default "away" from the reference point; set `direction="towards"` to calculate orientations towards the reference point.
+Utility function.
 """
 function calc_orientations(reference, positions; direction::String="away")
     if direction=="towards"
@@ -72,7 +73,7 @@ end
 
 
 """
-Return the angle (in degrees) between two 3-D vectors in Cartesian coordinates.
+Return the angle (in degrees) between two 3-D vectors in Cartesian coordinates. Utility function.
 """
 function angle_between(a,b) 
     return acosd.(dot(a, b)/(norm(a)*norm(b)))
@@ -82,7 +83,7 @@ end
 """
     is_corneapoint(orientation::Vector{Float64}, gazedir::Vector{Float64}, max_cornea_angle_deg::Float64)
 
-Return 1 if the angle between the given orientation vector and the gaze direction vector is less than or equal to the given maximum cornea angle; else return -1.
+Return 1 if the angle between the given orientation vector and the gaze direction vector is less than or equal to the given maximum cornea angle; else return -1. Utility function.
 
 """
 function is_corneapoint(orientation::Vector{Float64}, gazedir::Vector, max_cornea_angle_deg::Float64)
@@ -120,6 +121,7 @@ end
 """
 Calculate the leadfield resulting from activating only the specified source points, weighted according to the given weight vector. 
 It is assumed that the orientations for the respective source points are already set in the given head model.
+Used for simulating individual leadfields in eye movement simulation.
 """
 function generate_eyegaze_eeg(eyemodel, src_idx::AbstractVector, weights::AbstractVector)
 
@@ -131,6 +133,8 @@ end
 
 
 """
+    simulate_eyemovement(headmodel, gazevectors::AbstractMatrix, eye_model::String)
+
 Simulate the eye movement and return the corresponding scalp potentials at each of the channels, 
 given a head model, an array of gaze direction vectors defining the eye movement, and optionally an eye-model type. 
 
@@ -157,8 +161,6 @@ function simulate_eyemovement(headmodel, gazevectors::AbstractMatrix, eye_model:
         src_idx = [headmodel["eyecenter_left_idx"] headmodel["eyecenter_right_idx"]]
         # select eye centers as source points; set orientation = each respective gazevector and find corresponding leadfield
         
-        #TODO: can we make this independent of the headmodel object's orientations, and pass in the corresponding orientations directly to the function instead?
-        # the problem is that magnitude() will still only work with the model object's orientations.
         for ix = 1:size(gazevectors)[2]
             headmodel["orientation"][headmodel["eyecenter_left_idx"],:] = gazevectors[:,ix]
             headmodel["orientation"][headmodel["eyecenter_right_idx"],:] = gazevectors[:,ix]
@@ -179,7 +181,7 @@ function simulate_eyemovement(headmodel, gazevectors::AbstractMatrix, eye_model:
         for ix in 1:size(gazevectors,2)
             # weight changes depending on retina/cornea type based on current gazevector
             weights[src_idx] .= mapslices(x -> is_corneapoint(x,gazevectors[:,ix],54.0384), headmodel["orientation"][src_idx,:],dims=2)
-            # change the above line to separately calculate weights for left and right eye if giving gazepoints and calculating gaze vectors separately. or just run simulate_eyemovement twice, once with gazevectors based on left eye and once with right eye? 
+            # TODO (future outlook): change the above line to separately calculate weights for left and right eye if giving gazepoints and calculating gaze vectors separately. or just run simulate_eyemovement twice, once with gazevectors based on left eye and once with right eye? 
 
             leadfields[:,ix] = generate_eyegaze_eeg(headmodel, src_idx, weights)
         end
@@ -193,8 +195,9 @@ end
 
 
 """
-Read the eye model from a mat file, remove channels Nk1-Nk4, and calculate left/right eye indices, eye centers, orientations and add them to the eyemodel as properties. 
-Return imported model, labelsourceindices of eyemodel
+Utility function: read the eye model from a mat file, remove channels Nk1-Nk4; 
+calculate left/right eye source indices, eye centers, orientations away from respective eye centers; and add these to the eyemodel as properties. 
+Return imported model with additional properties as mentioned above.
 """
 function import_eyemodel(; labels=[
     r"EyeRetina_Choroid_Sclera_left$" # match the end of the search term, or else it also matches "leftright" sources.
@@ -236,7 +239,7 @@ function import_eyemodel(; labels=[
 end
 
 """
-Find the approximate current gaze direction from the orientations of cornea-labelled sources.
+Utility function: Find the approximate current gaze direction from the orientations of cornea-labelled sources.
 """
 function find_avg_gazedir(eyemodel)
     # finding cornea centers and approximate gaze direction (as mean of cornea orientations)
@@ -246,7 +249,7 @@ function find_avg_gazedir(eyemodel)
     gazedir_L = mean(eyemodel["orientation"][lsi_eyemodel["EyeCornea_left"],:], dims=1).*10
 end
 
-#TODO auto-find cornea max. angle from center and cornea point positions
+#TODO (future): auto-find cornea max. angle from center and cornea point positions
 
 
 function az_simulation()
